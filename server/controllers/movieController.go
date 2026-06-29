@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -22,14 +23,16 @@ func GetMovies() gin.HandlerFunc {
 		var movies []models.Movie
 
 		cursor, err := movieCollection.Find(ctx, bson.M{})
-
+		fmt.Println("Collection:", movieCollection.Name())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch movies"})
+			return
 		}
 		defer cursor.Close(ctx)
 
 		if err = cursor.All(ctx, &movies); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode movies"})
+			return
 		}
 		c.JSON(http.StatusOK, movies)
 	}

@@ -13,9 +13,7 @@ func main() {
 		c.String(200, "Hello, Magic Stream Movie")
 	})
 
-	router.GET("/movies", func(c *gin.Context) {
-		controller.GetMovies()
-	})
+	router.GET("/movies", controller.GetMovies())
 
 	if err := router.Run(":9080"); err != nil {
 		fmt.Println("Failed to start server")
