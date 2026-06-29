@@ -13,7 +13,17 @@ func main() {
 		c.String(200, "Hello, Magic Stream Movie")
 	})
 
-	router.GET("/movies", controller.GetMovies())
+	movie := router.Group("/movies")
+	{
+		movie.GET("", controller.GetMovies())
+		movie.GET("/:id", controller.GetMovieByID())
+
+		movie.POST("", controller.CreateMovie())
+
+		movie.PUT("/:id", controller.UpdateMovie())
+
+		movie.DELETE("/:id", controller.DeleteMovie())
+	}
 
 	if err := router.Run(":9080"); err != nil {
 		fmt.Println("Failed to start server")
