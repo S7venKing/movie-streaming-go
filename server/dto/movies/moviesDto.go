@@ -1,4 +1,4 @@
-package moviesDto
+package dto
 
 import (
 	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/models"
