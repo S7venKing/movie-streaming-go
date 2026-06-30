@@ -3,15 +3,14 @@ package controller
 import (
 	"context"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/database"
 	dto "github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/dto/auth"
 	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/models"
-
+	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
@@ -20,20 +19,6 @@ import (
 )
 
 var userCollection *mongo.Collection = database.OpenCollection("users")
-
-func generateToken(user models.User) (string, error) {
-
-	claims := jwt.MapClaims{
-		"user_id": user.ID.Hex(),
-		"email":   user.Email,
-		"role":    user.Role,
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-}
 
 func Register() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -149,7 +134,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateToken(user)
+		accessToken, err := utils.GenerateToken(user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Cannot generate access token",
@@ -254,23 +239,29 @@ func Logout() gin.HandlerFunc {
 func Me() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		id := c.Param("id")
-
-		objectID, err := bson.ObjectIDFromHex(id)
+		tokenString, err := utils.GetAccessToken(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Invalid user id",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": err.Error(),
 			})
 			return
 		}
 
+		claims, err := utils.ValidateToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Invalid token",
+			})
+			return
+		}
+
+		// User ID trong JWT
+		userID := claims.UserID
+
 		var user models.User
 
-		err = userCollection.FindOne(ctx, bson.M{
-			"_id": objectID,
+		err = userCollection.FindOne(c, bson.M{
+			"_id": userID,
 		}).Decode(&user)
 
 		if err == mongo.ErrNoDocuments {
