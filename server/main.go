@@ -25,6 +25,14 @@ func main() {
 		movie.DELETE("/:id", controller.DeleteMovie())
 	}
 
+	auth := router.Group("/auth")
+	{
+		auth.POST("/register", controller.Register())
+		auth.POST("/login", controller.Login())
+		auth.POST("/logout/:id", controller.Logout())
+		auth.GET("/me/:id", controller.Me())
+	}
+
 	if err := router.Run(":9080"); err != nil {
 		fmt.Println("Failed to start server")
 	}
