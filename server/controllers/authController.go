@@ -191,9 +191,25 @@ func Logout() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		id := c.Param("id")
+		// Lấy access token từ Authorization header
+		tokenString, err := utils.GetAccessToken(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": err.Error(),
+			})
+			return
+		}
 
-		objectID, err := bson.ObjectIDFromHex(id)
+		// Validate JWT
+		claims, err := utils.ValidateToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": err.Error(),
+			})
+			return
+		}
+
+		objectID, err := bson.ObjectIDFromHex(claims.UserID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Invalid user id",
@@ -233,7 +249,6 @@ func Logout() gin.HandlerFunc {
 			"message": "Logout successfully",
 		})
 	}
-
 }
 
 func Me() gin.HandlerFunc {
