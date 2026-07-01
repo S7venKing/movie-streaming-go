@@ -10,8 +10,8 @@ type Genre struct {
 }
 
 type Ranking struct {
-	IMDb float64 `bson:"imdb" json:"imdb" validate:"gte=0,lte=10"`
-	User float64 `bson:"user" json:"user" validate:"gte=0,lte=10"`
+	RankingValue int    `bson:"ranking_value" json:"ranking_value" validate:"gte=0"`
+	RankingName  string `bson:"ranking_name" json:"ranking_name"`
 }
 
 type Movie struct {

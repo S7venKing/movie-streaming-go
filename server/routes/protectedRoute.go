@@ -7,13 +7,18 @@ import (
 )
 
 func SetupProtectedRoutes(router *gin.Engine) {
+	movies := router.Group("/movies")
+	movies.Use(middleware.AuthMiddleWare())
+	{
+		movies.POST("/addmovie", controller.CreateMovie())
+		movies.PUT("/:id", controller.UpdateMovie())
+		movies.DELETE("/:id", controller.DeleteMovie())
+	}
 
-	router.Use(middleware.AuthMiddleWare())
-
-	router.POST("/movies/addmovie", controller.CreateMovie())
-	router.PUT("/movies/:id", controller.UpdateMovie())
-	router.DELETE("/movies/:id", controller.DeleteMovie())
-
-	router.POST("/auth/logout", controller.Logout())
-	router.GET("/auth/me", controller.Me())
+	auth := router.Group("/auth")
+	auth.Use(middleware.AuthMiddleWare())
+	{
+		auth.POST("/logout", controller.Logout())
+		auth.GET("/me", controller.Me())
+	}
 }
