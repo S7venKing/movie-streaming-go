@@ -22,7 +22,7 @@ type JWTClaims struct {
 func GenerateToken(user models.User) (string, error) {
 
 	claims := JWTClaims{
-		UserID: user.ID.Hex(),
+		UserID: user.UserID,
 		Email:  user.Email,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -93,4 +93,16 @@ func GetAccessToken(c *gin.Context) (string, error) {
 	}
 
 	return token, nil
+}
+
+func GetUserFromToken(c *gin.Context) (string, error) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		return "", errors.New("user ID not found in context")
+	}
+	id, ok := userId.(string)
+	if !ok {
+		return "", errors.New("user ID is not a string")
+	}
+	return id, nil
 }

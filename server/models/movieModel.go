@@ -9,6 +9,14 @@ type Genre struct {
 	GenreName string `bson:"genre_name" json:"genre_name" validate:"required,min=2,max=100"`
 }
 
+type FavoriteGenre struct {
+	GenreName string `bson:"genre_name"`
+}
+
+type FavoriteGenresResult struct {
+	FavouriteGenres []FavoriteGenre `bson:"favourite_genres"`
+}
+
 type Ranking struct {
 	RankingValue int    `bson:"ranking_value" json:"ranking_value" validate:"gte=0"`
 	RankingName  string `bson:"ranking_name" json:"ranking_name"`

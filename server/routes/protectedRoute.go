@@ -13,6 +13,7 @@ func SetupProtectedRoutes(router *gin.Engine) {
 		movies.POST("/addmovie", controller.CreateMovie())
 		movies.PUT("/:id", controller.UpdateMovie())
 		movies.DELETE("/:id", controller.DeleteMovie())
+		movies.GET("/recommendedmovies", controller.GetRecommendedMovies())
 	}
 
 	auth := router.Group("/auth")

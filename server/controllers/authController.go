@@ -147,7 +147,7 @@ func Login() gin.HandlerFunc {
 		_, err = userCollection.UpdateOne(
 			ctx,
 			bson.M{
-				"_id": user.ID,
+				"user_id": user.UserID,
 			},
 			bson.M{
 				"$set": bson.M{
@@ -209,7 +209,6 @@ func Logout() gin.HandlerFunc {
 			return
 		}
 
-		objectID, err := bson.ObjectIDFromHex(claims.UserID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Invalid user id",
@@ -220,7 +219,7 @@ func Logout() gin.HandlerFunc {
 		result, err := userCollection.UpdateOne(
 			ctx,
 			bson.M{
-				"_id": objectID,
+				"user_id": claims.UserID,
 			},
 			bson.M{
 				"$set": bson.M{

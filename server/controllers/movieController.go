@@ -6,18 +6,21 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/database"
 	moviesDto "github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/dto/movies"
 	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/models"
+	"github.com/S7venKing/movie-streaming-go/server/magic-stream-movie-server/utils"
 	"github.com/joho/godotenv"
 	"github.com/tmc/langchaingo/llms/openai"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 var movieCollection *mongo.Collection = database.OpenCollection("movies")
@@ -376,4 +379,81 @@ func GetRankings() ([]models.Ranking, error) {
 		return nil, err
 	}
 	return rankings, nil
+}
+
+func GetRecommendedMovies() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userId, err := utils.GetUserFromToken(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		favoriteGenres, err := GetUserFavoriteGenres(userId)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user favorite genres"})
+			return
+		}
+		err = godotenv.Load(".env")
+		if err != nil {
+			log.Println("Warning: .env file not found")
+		}
+		recommendedMoviesLimitValStr := os.Getenv("RECOMMENDED_MOVIES_LIMIT")
+		recommendedMoviesLimitVal, err := strconv.Atoi(recommendedMoviesLimitValStr)
+		if err != nil || recommendedMoviesLimitVal == 0 {
+			recommendedMoviesLimitVal = 5
+		}
+		findOptions := options.Find()
+		findOptions.SetSort(bson.D{{Key:"ranking.ranking_value", Value:1}})
+		findOptions.SetLimit(int64(recommendedMoviesLimitVal))
+		filter := bson.M{"genre.genre_name": bson.M{"$in": favoriteGenres}}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		cursor, err := movieCollection.Find(ctx, filter, findOptions)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recommended movies"})
+			return
+		}
+		defer cursor.Close(ctx)
+
+		var recommendedMovies []models.Movie
+		if err = cursor.All(ctx, &recommendedMovies); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode recommended movies"})
+			return
+		}
+		c.JSON(http.StatusOK , gin.H{"message": "Recommended movies fetched successfully", "data": recommendedMovies})
+	}
+}
+
+func GetUserFavoriteGenres(userId string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	opts := options.FindOne().SetProjection(bson.M{
+		"_id":                         0,
+		"favourite_genres.genre_name": 1,
+	})
+
+	var result models.FavoriteGenresResult
+
+	err := userCollection.FindOne(
+		ctx,
+		bson.M{"user_id": userId},
+		opts,
+	).Decode(&result)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+
+	genres := make([]string, 0, len(result.FavouriteGenres))
+	for _, genre := range result.FavouriteGenres {
+		if genre.GenreName != "" {
+			genres = append(genres, genre.GenreName)
+		}
+	}
+
+	return genres, nil
 }
